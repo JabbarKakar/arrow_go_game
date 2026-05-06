@@ -1,0 +1,187 @@
+You are an expert Flutter game developer building "Arrow Maze" —
+a directional arrow puzzle game similar to "Arrow Go" on the Play Store.
+
+═══════════════════════════════════════
+GAME RULES
+═══════════════════════════════════════
+- The puzzle is a grid of cells, each containing a directional arrow (up/down/left/right)
+- Only cells marked as "active" form the playable area — they create silhouette shapes (anchor, trophy, dog, heart, grid, etc.)
+- The player traces a path by dragging their finger from the START cell to the END cell
+- Each step in the path MUST follow the arrow direction of the current cell
+- A move is invalid if:
+    * It does not follow the current cell's arrow direction
+    * The target cell is inactive (not part of the shape)
+    * The target cell is already in the current path (no revisiting)
+- The level is WON when the path successfully reaches the END cell
+- The level is FAILED when all lives are lost
+
+═══════════════════════════════════════
+PROJECT ARCHITECTURE
+═══════════════════════════════════════
+Strictly follow this folder structure. Never deviate from it:
+
+lib/
+├── main.dart
+├── core/
+│   ├── models/
+│   │   ├── cell.dart
+│   │   ├── level.dart
+│   │   └── game_state.dart
+│   ├── engine/
+│   │   ├── maze_solver.dart
+│   │   ├── level_builder.dart
+│   │   ├── shape_library.dart
+│   │   └── path_tracing_controller.dart
+│   ├── services/
+│   │   ├── level_loader.dart
+│   │   └── progress_service.dart
+│   └── providers/
+│       ├── game_notifier.dart
+│       ├── level_progress_notifier.dart
+│       └── level_select_notifier.dart
+├── ui/
+│   ├── screens/
+│   │   ├── home_screen.dart
+│   │   ├── game_screen.dart
+│   │   └── level_select_screen.dart
+│   ├── widgets/
+│   │   ├── maze_painter.dart
+│   │   ├── maze_widget.dart
+│   │   ├── maze_gesture_handler.dart
+│   │   ├── hint_button.dart
+│   │   ├── level_tile.dart
+│   │   ├── pack_tab_bar.dart
+│   │   ├── win_overlay.dart
+│   │   └── fail_overlay.dart
+│   └── theme/
+│       └── app_theme.dart
+└── data/
+    └── levels/
+        └── pack_1.json
+
+═══════════════════════════════════════
+TECH STACK — USE EXACTLY THESE
+═══════════════════════════════════════
+- Flutter / Dart
+- provider:                       → All state management
+- hive_flutter:                   → Local storage (progress, stars)
+- go_router:                      → Navigation
+- audioplayers:                   → Sound effects
+- lottie:                         → Animations
+- google_fonts:                   → Typography (Nunito)
+
+DO NOT use:
+- Riverpod (use Provider only)
+- GetX
+- setState in game logic (only in leaf UI widgets if unavoidable)
+- Bloc/Cubit
+- freezed or build_runner (write copyWith manually)
+- Any maze or game engine packages
+
+═══════════════════════════════════════
+CODING RULES — ALWAYS FOLLOW THESE
+═══════════════════════════════════════
+1. MODELS
+   - All models are immutable with manual copyWith()
+   - All models have toJson() and fromJson() written manually (no code generation)
+   - Use enums for Direction: up, down, left, right, none
+
+2. STATE MANAGEMENT
+   - All game logic lives in GameNotifier (StateNotifier)
+   - UI only reads state and calls notifier methods — no logic in widgets
+   - Use ConsumerWidget / ConsumerStatefulWidget throughout
+
+3. RENDERING
+   - All maze drawing is done via CustomPainter — never use image assets for the grid
+   - MazePainter.shouldRepaint() must be optimized — only repaint on path change
+   - Cell size is always calculated dynamically to fit the available screen space
+
+4. GAME ENGINE
+   - PathTracingController is pure Dart — zero Flutter dependencies
+   - MazeSolver uses DFS and must return null if unsolvable
+   - LevelBuilder must verify solvability before returning a Level (max 10 retries)
+
+5. NAVIGATION
+   - Use go_router exclusively
+   - Routes: / (home), /levels (level select), /game/:levelId (game screen)
+
+6. PERFORMANCE
+   - Avoid rebuilding the entire widget tree on every path step
+   - Use select() in Riverpod to watch only specific state fields
+   - Canvas operations must use save() / restore() properly
+
+7. NAMING CONVENTIONS
+   - Files: snake_case
+   - Classes: PascalCase
+   - Variables/methods: camelCase
+   - Constants: kCamelCase (e.g. kCellSize)
+   - Private fields: _camelCase
+
+═══════════════════════════════════════
+VISUAL DESIGN SYSTEM
+═══════════════════════════════════════
+All colors and styles must come from app_theme.dart.
+Never hardcode colors or font sizes inline.
+
+Color palette:
+  kBackgroundColor   = #F5ECD7   (warm cream)
+  kCellColor         = #C49A6C   (warm tan)
+  kPathColor         = #4A90D9   (blue)
+  kStartColor        = #5DB075   (green)
+  kEndColor          = #E05C5C   (red)
+  kArrowColor        = #8B5E3C   (dark brown)
+  kInactiveColor     = transparent
+  kStarColor         = #F5C518   (gold)
+  kTextPrimary       = #3E2A1A   (dark brown)
+
+Typography:
+  - All text uses GoogleFonts.nunito
+  - Title: 28sp, bold
+  - Level number: 20sp, semibold
+  - Button: 16sp, bold
+
+Dimensions:
+  - Cell padding: 4px
+  - Cell corner radius: 6px
+  - Arrow stroke width: 2.5px
+  - Arrowhead size: 6px triangle
+
+═══════════════════════════════════════
+LEVEL JSON FORMAT
+═══════════════════════════════════════
+Every level must follow this exact schema:
+
+{
+  "id": "pack1_level1",
+  "name": "Level 1",
+  "shape": "grid",
+  "gridWidth": 10,
+  "gridHeight": 10,
+  "difficulty": 1,
+  "pack": 1,
+  "startX": 0,
+  "startY": 0,
+  "endX": 9,
+  "endY": 9,
+  "grid": [
+    [
+      { "x": 0, "y": 0, "direction": "right", "isActive": true, "isStart": true, "isEnd": false },
+      ...
+    ],
+    ...
+  ]
+}
+
+Direction values must be exactly: "up", "down", "left", "right", "none"
+
+═══════════════════════════════════════
+WHEN CURSOR GENERATES CODE
+═══════════════════════════════════════
+- Always place files in the correct folder per the architecture above
+- Always add relevant imports at the top of every file
+- Always write a brief comment at the top of each file explaining its purpose
+- If a method is longer than 40 lines, split it into smaller private methods
+- After generating any model, immediately generate its fromJson/toJson
+- After generating any StatNotifier, immediately wire it as a Provider at the bottom of the same file
+- Never leave TODO comments — implement everything fully
+- If something is genuinely complex, add a // EXPLANATION: comment inline
